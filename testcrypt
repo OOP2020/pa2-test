@@ -1,0 +1,152 @@
+#!/bin/bash
+# usage: run Student1 Student2 ...
+# 
+
+# Student subdirectory for this project:
+PROJECT=pa2
+
+# Name of class to compile and run
+PROGRAM=Crypt
+
+TESTDIR=/home/jim/tests
+OUTDIR=/tmp
+
+# Count failures and print a message
+failures=0
+
+# Test if two files have same content
+assertFileSame() {
+    /usr/bin/cmp $1 $2
+    if [ $? -eq 0 ]; then
+		echo "OK"
+	else
+    	failures=$(($failures + 1))
+    	echo "Failed"
+    fi
+}
+
+# Usage: cryptAndCompare inputfile expectedtext args ...
+# args (after first 2 args) are given to the Crypt program
+cryptAndCompare() {
+	infile=$1
+	outfile=$OUTDIR/`basename $1`.out
+	expected=$2
+	# pop first two arguments
+	shift 2
+	/bin/rm -f $outfile
+	# $* gives all the arguments
+	echo $PROGRAM -in $infile -out $outfile $*
+	java $PROGRAM -in $infile -out $outfile $*
+	assertFileSame $expected $outfile
+}
+
+
+testshift() {
+
+	echo ">>> Encrypt file containing only space and newlines (should not change)"
+	cryptAndCompare $TESTDIR/file1 $TESTDIR/file1 -alg shift -key 10
+
+	echo ">>> Encrypt file containing letters and symbols"
+	cryptAndCompare $TESTDIR/file2 $TESTDIR/file2 -alg shift
+	cryptAndCompare $TESTDIR/file2 $TESTDIR/file2.shift10 -alg shift -key 10
+	cryptAndCompare $TESTDIR/file2 $TESTDIR/file2.shift100 -alg shift -key 100
+
+	echo ">>> Encrypt command line data (no newline). Direct output to file and compare"
+	data=`head -1 $TESTDIR/data`
+    outfile=$OUTDIR/test.out
+	expected=$TESTDIR/data.shift13
+	/bin/rm -f $outfile
+	echo "$PROGRAM -out $outfile -alg shift -data \"$data\" -key 13"
+	java  $PROGRAM -out $outfile -alg shift -data "$data" -key 13
+	assertFileSame $expected $outfile
+
+	echo ">>> Encrypt file containing Thai text on 2 lines"
+	cryptAndCompare $TESTDIR/file3 $TESTDIR/file3.shift25 -key 25
+
+	echo ">>> Encrypt long text from Alice in Wonderland, then decrypt and compare"
+	echo ">>> If run time more then 1 second, then count as a failure."
+	plaintext=$TESTDIR/file4
+	ciphertext=$OUTDIR/file4.enc
+	/bin/rm -f $ciphertext
+	# first encrypt it
+	java $PROGRAM -in $plaintext -out $ciphertext -key 24
+	# then decrypt and compare
+	cryptAndCompare $ciphertext $plaintext -key 24 -mode dec
+	
+}
+
+# Most students implement the unicode agorithm incorrectly.
+# They don't check for wrap-around at 65,636 and they don't encrypt newline chars.
+# Java silently wraps negative ints to positive when a (char) cast is used.
+# These tests don't use a key big enough for force wrap-round.
+testunicode() {
+
+	echo ">>> Unicode encrypt file containing only space and newlines"
+	cryptAndCompare $TESTDIR/file1 $TESTDIR/file1.unicode999 -alg unicode -key 999
+
+	echo ">>> Unicode encrypt file containing letters and symbols"
+	cryptAndCompare $TESTDIR/file2 $TESTDIR/file2 -alg unicode    # file not changed
+	cryptAndCompare $TESTDIR/file2 $TESTDIR/file2.unicode500 -alg unicode -key 500
+
+	echo ">>> Encrypt file of Thai text and 1 english word"
+	cryptAndCompare $TESTDIR/file3 $TESTDIR/file3.unicode500 -key 500 -alg unicode
+
+	echo ">>> Encrypt long text from Alice in Wonderland, then decrypt and compare"
+	echo ">>> If run time more then 1 second, then count as a failure."
+	plaintext=$TESTDIR/file4
+	ciphertext=$OUTDIR/file4.enc
+	key=4999
+	/bin/rm -f $ciphertext
+	# first encrypt it
+	java $PROGRAM -in $plaintext -out $ciphertext -key $key -alg unicode
+	# then decrypt and compare
+	cryptAndCompare $ciphertext $plaintext -key $key -alg unicode -mode dec 
+}
+
+# Test one student's code
+# param: $1 = student name (and name of his directory)
+runone() {
+	PROGRAM=${1:-Crypt}
+	#dir=$name/$PROJECT
+	dir=.
+
+	if [ ! -d $dir ]; then
+		echo No directory $name
+    	return
+	elif [ -d $dir/src ]; then
+		srcdir=$dir/src
+	elif [ -d $dir ]; then
+    	srcdir=$dir
+	else
+		echo No directory $dir
+    	return
+	fi
+
+	if [ ! -f $srcdir/$PROGRAM.java ]; then
+		echo No file $srcdir/$PROGRAM.java
+    	return
+	else
+	echo "=========================================================="
+	echo "Testing $name in $srcdir"
+	echo "=========================================================="
+	pushd $srcdir
+
+	javac $PROGRAM.java
+	if [ ! -f $PROGRAM.class ]; then
+		echo "Compile failed"
+		return
+	fi
+	testshift
+	testunicode
+
+	popd
+
+fi
+}
+
+# run each command line argument
+failures=0
+runone $1
+echo "Done $arg "
+echo "Failures: $failures"
+
