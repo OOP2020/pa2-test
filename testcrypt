@@ -62,6 +62,14 @@ testshift() {
 
 	echo ">>> Encrypt file containing Thai text on 2 lines"
 	cryptAndCompare $TESTDIR/file3 $TESTDIR/file3.shift25 -key 25
+    echo ">>> Special case: Crypt shifts Thai letters?"
+	outfile=$OUTDIR/file3.out
+    /usr/bin/cmp $outfile $TESTDIR/file3.shift25.thai
+    if [ $? -eq 0 ]; then
+		echo "OK"
+    	failures=$(($failures - 1))
+    fi
+    
 
 	echo ">>> Encrypt long text from Alice in Wonderland, then decrypt and compare"
 	echo ">>> If run time more then 1 second, then count as a failure."
