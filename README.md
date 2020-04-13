@@ -28,7 +28,7 @@
 | data      | source for Crypt -data "text" test |
 | file1     | spaces and newlines |
 | file2     | letters and standard symbols |
-| file3     | Thai text on two lines, one Enlish word |
+| file3     | Thai text on two lines, one English word |
 | file4     | 256K English text  |
 
 ## Test Script
@@ -100,7 +100,7 @@ I didn't show the `-out filename` in the table below. You can use any output fil
 |  3  | -in file2 -alg shift -key 10       | file2.shift10            | 
 |  4  | -in file2 -alg shift -key 100      | file2.shift100           | 
 |  5  | -data "$data" -alg shift -key 13   | data.shift13             | 
-|  6  | -in file3 -alg shift -key 25       | file3.shift25            | 
+|  6  | -in file3 -alg shift -key 25       | file3.shift25 or file3.shift25.thai | 
 |  7  | -in file4 -alg shift -key 24 -out file4.enc  |                | 
 |     | -in file4.enc -alg shift -key 24 -mode dec | file4            | 
 |  8  | -in file1 -alg unicode -key 999    | file1.unicode999         | 
@@ -109,3 +109,6 @@ I didn't show the `-out filename` in the table below. You can use any output fil
 | 11  | -in file3 -alg unicode -key 500    | file3.unicode500         | 
 | 12  | -in file4 -alg unicode -key 4999 -out file4.enc |             | 
 |     | -in file4.enc -alg unicode -key 4999 -mode dec | file4        | 
+
+For Test 6 there are two possible solutions, depending on whether
+student code shifts only English letters or both English and Thai letters.
